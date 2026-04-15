@@ -1,7 +1,22 @@
+let sharedAudio: HTMLAudioElement | null = null;
+let audioUnlocked = false;
+
+type WindowWithWebkitAudio = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
 // Generate a simple beep sound using Web Audio API
 export function generateBeepSound(): Promise<string> {
   return new Promise((resolve) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextCtor =
+      window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      resolve("data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==");
+      return;
+    }
+
+    const audioContext = new AudioContextCtor();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -25,11 +40,46 @@ export function generateBeepSound(): Promise<string> {
   });
 }
 
+function getSharedAudio(soundUrl: string): HTMLAudioElement {
+  if (!sharedAudio) {
+    sharedAudio = new Audio(soundUrl);
+    sharedAudio.preload = "auto";
+  }
+
+  if (sharedAudio.src !== new URL(soundUrl, window.location.origin).toString()) {
+    sharedAudio.src = soundUrl;
+  }
+
+  return sharedAudio;
+}
+
+export function isAudioUnlocked(): boolean {
+  return audioUnlocked;
+}
+
+export async function unlockAudio(soundUrl: string = "/notification.mp3"): Promise<void> {
+  const audio = getSharedAudio(soundUrl);
+
+  audio.muted = true;
+  audio.volume = 0;
+
+  try {
+    await audio.play();
+    audio.pause();
+    audio.currentTime = 0;
+    audioUnlocked = true;
+  } finally {
+    audio.muted = false;
+  }
+}
+
 // Play a sound
 export async function playSound(soundUrl: string, volume: number = 1): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      const audio = new Audio(soundUrl);
+      const audio = getSharedAudio(soundUrl);
+      audio.pause();
+      audio.currentTime = 0;
       audio.volume = Math.min(Math.max(volume / 100, 0), 1);
       audio.play().catch(reject);
       

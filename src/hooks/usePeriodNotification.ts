@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Period, PeriodConfig } from "@/types/period";
 import {
-  didPeriodChange,
   getCurrentTimeString,
   isCurrentTimeBetween,
+  isAudioUnlocked,
   playSound,
+  unlockAudio,
 } from "@/lib/audioUtils";
 
 const STORAGE_KEY = "periodConfig";
@@ -93,8 +94,9 @@ export function usePeriodNotification() {
   const [config, setConfig] = useState<PeriodConfig>(createDefaultConfig);
   const [currentPeriod, setCurrentPeriod] = useState<Period | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
-  const previousTimeRef = useRef<string | null>(null);
+  const [audioReady, setAudioReady] = useState<boolean>(isAudioUnlocked);
   const notificationPlayedRef = useRef<Set<string>>(new Set());
+  const initialConfigRef = useRef(config);
 
   const initializeDefaultConfig = () => {
     const defaultConfig = createDefaultConfig();
@@ -107,8 +109,8 @@ export function usePeriodNotification() {
   };
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  }, [config]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialConfigRef.current));
+  }, []);
 
   useEffect(() => {
     if (!config.isEnabled) return;
@@ -118,43 +120,42 @@ export function usePeriodNotification() {
       const activePeriods = getPeriodsForSchedule(config, getScheduleTypeForToday());
       setCurrentTime(time);
 
-      if (didPeriodChange(previousTimeRef.current, time)) {
-        let newPeriod: Period | null = null;
-        for (const period of activePeriods) {
-          if (isCurrentTimeBetween(period.startTime, period.endTime)) {
-            newPeriod = period;
-            break;
-          }
-        }
-
-        if (newPeriod && newPeriod.id !== currentPeriod?.id) {
-          setCurrentPeriod(newPeriod);
-
-          if (newPeriod.soundUrl && !notificationPlayedRef.current.has(`${time}-${newPeriod.id}`)) {
-            try {
-              await playSound(newPeriod.soundUrl, config.volume);
-              notificationPlayedRef.current.add(`${time}-${newPeriod.id}`);
-
-              if (notificationPlayedRef.current.size > 100) {
-                notificationPlayedRef.current.clear();
-              }
-            } catch (error) {
-              console.error("Error playing sound:", error);
-            }
-          }
-        } else if (!newPeriod) {
-          setCurrentPeriod(null);
-        }
-      } else if (!currentPeriod && activePeriods.length > 0) {
-        for (const period of activePeriods) {
-          if (isCurrentTimeBetween(period.startTime, period.endTime)) {
-            setCurrentPeriod(period);
-            break;
-          }
+      let detectedPeriod: Period | null = null;
+      for (const period of activePeriods) {
+        if (isCurrentTimeBetween(period.startTime, period.endTime)) {
+          detectedPeriod = period;
+          break;
         }
       }
 
-      previousTimeRef.current = time;
+      const playPeriodSound = async (period: Period) => {
+        if (!period.soundUrl || notificationPlayedRef.current.has(`${time}-${period.id}`)) {
+          return;
+        }
+
+        try {
+          if (!isAudioUnlocked()) {
+            return;
+          }
+
+          await playSound(period.soundUrl, config.volume);
+          notificationPlayedRef.current.add(`${time}-${period.id}`);
+
+          if (notificationPlayedRef.current.size > 100) {
+            notificationPlayedRef.current.clear();
+          }
+        } catch (error) {
+          console.error("Error playing sound:", error);
+        }
+      };
+
+      if (detectedPeriod?.id !== currentPeriod?.id) {
+        setCurrentPeriod(detectedPeriod);
+
+        if (detectedPeriod) {
+          await playPeriodSound(detectedPeriod);
+        }
+      }
     }, 1000);
 
     return () => clearInterval(intervalId);
@@ -215,10 +216,16 @@ export function usePeriodNotification() {
     });
   };
 
+  const enableAudio = async () => {
+    await unlockAudio(DEFAULT_SOUND);
+    setAudioReady(true);
+  };
+
   return {
     config,
     currentPeriod,
     currentTime,
+    audioReady,
     getActivePeriods,
     getScheduleTypeForToday,
     saveConfig,
@@ -227,6 +234,7 @@ export function usePeriodNotification() {
     deletePeriod,
     toggleEnabled,
     updateVolume,
+    enableAudio,
     resetToDefaults: initializeDefaultConfig,
   };
 }

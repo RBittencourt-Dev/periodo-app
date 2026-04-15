@@ -11,10 +11,12 @@ export function PeriodManager() {
     config,
     currentPeriod,
     currentTime,
+    audioReady,
     getActivePeriods,
     addPeriod,
     updatePeriod,
     deletePeriod,
+    enableAudio,
     toggleEnabled,
     updateVolume,
   } = usePeriodNotification();
@@ -125,13 +127,15 @@ export function PeriodManager() {
             </div>
 
             {activeTab === "overview" && (
-              <PeriodDisplay
-                currentPeriod={currentPeriod}
-                currentTime={currentTime}
-                config={config}
-                onToggleEnabled={toggleEnabled}
-                onVolumeChange={updateVolume}
-              />
+          <PeriodDisplay
+            currentPeriod={currentPeriod}
+            currentTime={currentTime}
+            config={config}
+            audioReady={audioReady}
+            onEnableAudio={enableAudio}
+            onToggleEnabled={toggleEnabled}
+            onVolumeChange={updateVolume}
+          />
             )}
 
             {activeTab === "periods" && (

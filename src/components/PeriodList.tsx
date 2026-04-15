@@ -5,6 +5,8 @@ import { useRef, useState } from "react";
 import { PencilLine, Plus, Save, Trash2, Volume2, X } from "lucide-react";
 import { playSound } from "@/lib/audioUtils";
 
+const DEFAULT_SOUND = "/notification.mp3";
+
 interface PeriodItemProps {
   period: Period;
   onUpdate: (updates: Partial<Period>) => void;
@@ -191,7 +193,7 @@ export function PeriodList({
     name: "",
     startTime: "08:00",
     endTime: "09:00",
-    soundUrl: "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==",
+    soundUrl: DEFAULT_SOUND,
   });
   const newPeriodFileInputRef = useRef<HTMLInputElement>(null);
   const [isPlayingNewSound, setIsPlayingNewSound] = useState(false);
@@ -230,7 +232,7 @@ export function PeriodList({
         name: "",
         startTime: "08:00",
         endTime: "09:00",
-        soundUrl: "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==",
+        soundUrl: DEFAULT_SOUND,
       });
       setShowAddForm(false);
     }

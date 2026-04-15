@@ -7,6 +7,8 @@ interface PeriodDisplayProps {
   currentPeriod: Period | null;
   currentTime: string;
   config: PeriodConfig | null;
+  audioReady: boolean;
+  onEnableAudio: () => Promise<void>;
   onToggleEnabled: () => void;
   onVolumeChange: (volume: number) => void;
 }
@@ -15,6 +17,8 @@ export function PeriodDisplay({
   currentPeriod,
   currentTime,
   config,
+  audioReady,
+  onEnableAudio,
   onToggleEnabled,
   onVolumeChange,
 }: PeriodDisplayProps) {
@@ -98,6 +102,31 @@ export function PeriodDisplay({
               }`}
             >
               {config.isEnabled ? "Desativar" : "Ativar"}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-blue-50 p-2 text-blue-700">
+                <Bell size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Audio do navegador</p>
+                <p className="text-sm text-slate-500">
+                  {audioReady ? "Pronto para tocar notificacoes" : "Clique para liberar o audio"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => void onEnableAudio()}
+              className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+                audioReady
+                  ? "bg-emerald-500 hover:bg-emerald-600"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {audioReady ? "Audio ativo" : "Ativar audio"}
             </button>
           </div>
 
