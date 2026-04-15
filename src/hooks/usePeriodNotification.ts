@@ -81,74 +81,6 @@ const createDefaultConfig = (): PeriodConfig => ({
   volume: 100,
 });
 
-const isLegacyConfig = (value: unknown): value is Omit<PeriodConfig, "fridayPeriods" | "fridayDefaultsVersion"> => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const config = value as Partial<PeriodConfig>;
-  return (
-    Array.isArray(config.periods) &&
-    typeof config.isEnabled === "boolean" &&
-    typeof config.volume === "number"
-  );
-};
-
-const isValidConfig = (value: unknown): value is PeriodConfig => {
-  if (!isLegacyConfig(value)) {
-    return false;
-  }
-
-  return Array.isArray((value as PeriodConfig).fridayPeriods);
-};
-
-const normalizeConfig = (value: unknown): PeriodConfig => {
-  const defaultConfig = createDefaultConfig();
-
-  if (isValidConfig(value)) {
-    if (value.version !== CONFIG_VERSION) {
-      return {
-        ...defaultConfig,
-        periods: clonePeriods(value.periods),
-      };
-    }
-
-    if (value.fridayDefaultsVersion !== FRIDAY_DEFAULTS_VERSION) {
-      return {
-        ...value,
-        version: CONFIG_VERSION,
-        fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
-        periods: clonePeriods(value.periods),
-        fridayPeriods: clonePeriods(fridayDefaultPeriods),
-      };
-    }
-
-    return {
-      ...value,
-      version: CONFIG_VERSION,
-      fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
-      periods: clonePeriods(value.periods),
-      fridayPeriods:
-        value.fridayPeriods.length > 0
-          ? clonePeriods(value.fridayPeriods)
-          : clonePeriods(fridayDefaultPeriods),
-    };
-  }
-
-  if (isLegacyConfig(value)) {
-    return {
-      version: CONFIG_VERSION,
-      fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
-      periods: clonePeriods(value.periods),
-      fridayPeriods: clonePeriods(fridayDefaultPeriods),
-      isEnabled: value.isEnabled,
-      volume: value.volume,
-    };
-  }
-
-  return defaultConfig;
-};
-
 const getScheduleTypeForToday = (): ScheduleType => {
   const dayOfWeek = new Date().getDay();
   return dayOfWeek === 5 ? "friday" : "regular";
@@ -158,7 +90,7 @@ const getPeriodsForSchedule = (config: PeriodConfig, schedule: ScheduleType): Pe
   schedule === "friday" ? config.fridayPeriods : config.periods;
 
 export function usePeriodNotification() {
-  const [config, setConfig] = useState<PeriodConfig | null>(null);
+  const [config, setConfig] = useState<PeriodConfig>(createDefaultConfig);
   const [currentPeriod, setCurrentPeriod] = useState<Period | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
   const previousTimeRef = useRef<string | null>(null);
@@ -171,31 +103,15 @@ export function usePeriodNotification() {
   };
 
   const getActivePeriods = (schedule: ScheduleType = getScheduleTypeForToday()) => {
-    if (!config) return [];
     return getPeriodsForSchedule(config, schedule);
   };
 
   useEffect(() => {
-    const loadConfig = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const normalizedConfig = normalizeConfig(JSON.parse(stored));
-          setConfig(normalizedConfig);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedConfig));
-        } catch {
-          initializeDefaultConfig();
-        }
-      } else {
-        initializeDefaultConfig();
-      }
-    };
-
-    loadConfig();
-  }, []);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  }, [config]);
 
   useEffect(() => {
-    if (!config?.isEnabled) return;
+    if (!config.isEnabled) return;
 
     const intervalId = setInterval(async () => {
       const time = getCurrentTimeString();
@@ -256,8 +172,6 @@ export function usePeriodNotification() {
   };
 
   const addPeriod = (period: Period, schedule: ScheduleType = "regular") => {
-    if (!config) return;
-
     const key = schedule === "friday" ? "fridayPeriods" : "periods";
     saveConfig({
       ...config,
@@ -270,8 +184,6 @@ export function usePeriodNotification() {
     updates: Partial<Period>,
     schedule: ScheduleType = "regular"
   ) => {
-    if (!config) return;
-
     const key = schedule === "friday" ? "fridayPeriods" : "periods";
     saveConfig({
       ...config,
@@ -282,8 +194,6 @@ export function usePeriodNotification() {
   };
 
   const deletePeriod = (id: string, schedule: ScheduleType = "regular") => {
-    if (!config) return;
-
     const key = schedule === "friday" ? "fridayPeriods" : "periods";
     saveConfig({
       ...config,
@@ -292,7 +202,6 @@ export function usePeriodNotification() {
   };
 
   const toggleEnabled = () => {
-    if (!config) return;
     saveConfig({
       ...config,
       isEnabled: !config.isEnabled,
@@ -300,7 +209,6 @@ export function usePeriodNotification() {
   };
 
   const updateVolume = (volume: number) => {
-    if (!config) return;
     saveConfig({
       ...config,
       volume: Math.min(Math.max(volume, 0), 100),
