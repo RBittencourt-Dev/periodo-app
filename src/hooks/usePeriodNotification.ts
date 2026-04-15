@@ -1,17 +1,161 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Period, PeriodConfig } from "@/types/period";
 import {
+  didPeriodChange,
   getCurrentTimeString,
   isCurrentTimeBetween,
-  didPeriodChange,
   playSound,
 } from "@/lib/audioUtils";
 
 const STORAGE_KEY = "periodConfig";
-const DEFAULT_SOUND =
-  "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==";
+const CONFIG_VERSION = 5;
+const FRIDAY_DEFAULTS_VERSION = 1;
+const DEFAULT_SOUND = "/notification.mp3";
+
+export type ScheduleType = "regular" | "friday";
+
+const clonePeriods = (periods: Period[]): Period[] => periods.map((period) => ({ ...period }));
+
+const defaultPeriods: Period[] = [
+  { id: "1", name: "Manha Periodo 1 EFII/EM", startTime: "07:15", endTime: "07:16", soundUrl: DEFAULT_SOUND },
+  { id: "2", name: "Manha Periodo 1 EFI", startTime: "07:25", endTime: "07:26", soundUrl: DEFAULT_SOUND },
+  { id: "3", name: "Manha Periodo 2 EFII/EM", startTime: "08:05", endTime: "08:06", soundUrl: DEFAULT_SOUND },
+  { id: "4", name: "Manha Periodo 2 EFI / Recreio 1o e 2o EFI", startTime: "08:15", endTime: "08:16", soundUrl: DEFAULT_SOUND },
+  { id: "5", name: "Manha Periodo 3 EFII/EM", startTime: "08:55", endTime: "08:56", soundUrl: DEFAULT_SOUND },
+  { id: "6", name: "Manha Recreio EFI 3o ao 5o", startTime: "09:05", endTime: "09:06", soundUrl: DEFAULT_SOUND },
+  { id: "7", name: "Manha Periodo 3 EFI 3o ao 5o", startTime: "09:20", endTime: "09:21", soundUrl: DEFAULT_SOUND },
+  { id: "8", name: "Manha Recreio EFII", startTime: "09:45", endTime: "09:46", soundUrl: DEFAULT_SOUND },
+  { id: "9", name: "Manha Periodo 4 EFII", startTime: "10:00", endTime: "10:01", soundUrl: DEFAULT_SOUND },
+  { id: "10", name: "Manha Periodo 4 EFI", startTime: "10:10", endTime: "10:11", soundUrl: DEFAULT_SOUND },
+  { id: "11", name: "Manha Recreio EM", startTime: "10:35", endTime: "10:36", soundUrl: DEFAULT_SOUND },
+  { id: "12", name: "Manha Periodo 5 EFII/EM", startTime: "10:50", endTime: "10:51", soundUrl: DEFAULT_SOUND },
+  { id: "13", name: "Manha Periodo 5 EFI", startTime: "11:00", endTime: "11:01", soundUrl: DEFAULT_SOUND },
+  { id: "14", name: "Manha Periodo 6 EM", startTime: "11:40", endTime: "11:41", soundUrl: DEFAULT_SOUND },
+  { id: "15", name: "Manha Ultimo Periodo EFI", startTime: "11:50", endTime: "11:51", soundUrl: DEFAULT_SOUND },
+  { id: "16", name: "Manha Ultimo Periodo EM", startTime: "12:30", endTime: "12:31", soundUrl: DEFAULT_SOUND },
+  { id: "17", name: "Tarde Periodo 1 EFI/EFII", startTime: "13:10", endTime: "13:11", soundUrl: DEFAULT_SOUND },
+  { id: "18", name: "Tarde Periodo 2 EFI/EFII", startTime: "14:00", endTime: "14:01", soundUrl: DEFAULT_SOUND },
+  { id: "19", name: "Tarde Periodo 3 EFII / Recreio EFI", startTime: "14:50", endTime: "14:51", soundUrl: DEFAULT_SOUND },
+  { id: "20", name: "Tarde Periodo 3 EFI", startTime: "15:05", endTime: "15:06", soundUrl: DEFAULT_SOUND },
+  { id: "21", name: "Tarde Recreio EFII", startTime: "15:40", endTime: "15:41", soundUrl: DEFAULT_SOUND },
+  { id: "22", name: "Tarde Periodo 4 EFI/EFII", startTime: "15:55", endTime: "15:56", soundUrl: DEFAULT_SOUND },
+  { id: "23", name: "Tarde Periodo 5 EFI/EFII", startTime: "16:45", endTime: "16:46", soundUrl: DEFAULT_SOUND },
+  { id: "24", name: "Tarde Ultimo Periodo", startTime: "17:35", endTime: "17:36", soundUrl: DEFAULT_SOUND },
+];
+
+const fridayDefaultPeriods: Period[] = [
+  { id: "1", name: "Manha Periodo 1 EFII/EM", startTime: "07:15", endTime: "07:16", soundUrl: DEFAULT_SOUND },
+  { id: "2", name: "Manha Periodo 1 EFI", startTime: "07:25", endTime: "07:26", soundUrl: DEFAULT_SOUND },
+  { id: "3", name: "Manha Periodo 2 EFII/EM", startTime: "08:05", endTime: "08:06", soundUrl: DEFAULT_SOUND },
+  { id: "4", name: "Manha Periodo 2 EFI / Recreio 1o e 2o EFI", startTime: "08:15", endTime: "08:16", soundUrl: DEFAULT_SOUND },
+  { id: "5", name: "Manha Periodo 3 EFII/EM", startTime: "08:55", endTime: "08:56", soundUrl: DEFAULT_SOUND },
+  { id: "6", name: "Manha Recreio EFI 3o ao 5o", startTime: "09:05", endTime: "09:06", soundUrl: DEFAULT_SOUND },
+  { id: "7", name: "Manha Periodo 3 EFI 3o ao 5o", startTime: "09:20", endTime: "09:21", soundUrl: DEFAULT_SOUND },
+  { id: "8", name: "Manha Recreio EFII", startTime: "09:45", endTime: "09:46", soundUrl: DEFAULT_SOUND },
+  { id: "9", name: "Manha Periodo 4 EFII", startTime: "10:00", endTime: "10:01", soundUrl: DEFAULT_SOUND },
+  { id: "10", name: "Manha Periodo 4 EFI", startTime: "10:10", endTime: "10:11", soundUrl: DEFAULT_SOUND },
+  { id: "11", name: "Manha Recreio EM", startTime: "10:35", endTime: "10:36", soundUrl: DEFAULT_SOUND },
+  { id: "12", name: "Manha Periodo 5 EFII/EM", startTime: "10:50", endTime: "10:51", soundUrl: DEFAULT_SOUND },
+  { id: "13", name: "Manha Periodo 5 EFI", startTime: "11:00", endTime: "11:01", soundUrl: DEFAULT_SOUND },
+  { id: "14", name: "Manha Periodo 6 EM", startTime: "11:40", endTime: "11:41", soundUrl: DEFAULT_SOUND },
+  { id: "15", name: "Manha Ultimo Periodo EFI", startTime: "11:50", endTime: "11:51", soundUrl: DEFAULT_SOUND },
+  { id: "16", name: "Manha Ultimo Periodo EM", startTime: "12:30", endTime: "12:31", soundUrl: DEFAULT_SOUND },
+  { id: "17", name: "Tarde Periodo 1 EFI/EFII", startTime: "13:10", endTime: "13:11", soundUrl: DEFAULT_SOUND },
+  { id: "18", name: "Tarde Periodo 2 EFI/EFII", startTime: "13:50", endTime: "13:51", soundUrl: DEFAULT_SOUND },
+  { id: "19", name: "Tarde Periodo 3 EFII / Recreio EFI", startTime: "14:30", endTime: "14:31", soundUrl: DEFAULT_SOUND },
+  { id: "20", name: "Tarde Periodo 3 EFI", startTime: "14:45", endTime: "14:46", soundUrl: DEFAULT_SOUND },
+  { id: "21", name: "Tarde Recreio EFII", startTime: "15:10", endTime: "15:11", soundUrl: DEFAULT_SOUND },
+  { id: "22", name: "Tarde Periodo 4 EFI/EFII", startTime: "15:25", endTime: "15:26", soundUrl: DEFAULT_SOUND },
+  { id: "23", name: "Tarde Periodo 5 EFI/EFII", startTime: "16:05", endTime: "16:06", soundUrl: DEFAULT_SOUND },
+  { id: "24", name: "Tarde Ultimo Periodo", startTime: "16:45", endTime: "16:46", soundUrl: DEFAULT_SOUND },
+];
+
+const createDefaultConfig = (): PeriodConfig => ({
+  version: CONFIG_VERSION,
+  fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
+  periods: clonePeriods(defaultPeriods),
+  fridayPeriods: clonePeriods(fridayDefaultPeriods),
+  isEnabled: true,
+  volume: 100,
+});
+
+const isLegacyConfig = (value: unknown): value is Omit<PeriodConfig, "fridayPeriods" | "fridayDefaultsVersion"> => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const config = value as Partial<PeriodConfig>;
+  return (
+    Array.isArray(config.periods) &&
+    typeof config.isEnabled === "boolean" &&
+    typeof config.volume === "number"
+  );
+};
+
+const isValidConfig = (value: unknown): value is PeriodConfig => {
+  if (!isLegacyConfig(value)) {
+    return false;
+  }
+
+  return Array.isArray((value as PeriodConfig).fridayPeriods);
+};
+
+const normalizeConfig = (value: unknown): PeriodConfig => {
+  const defaultConfig = createDefaultConfig();
+
+  if (isValidConfig(value)) {
+    if (value.version !== CONFIG_VERSION) {
+      return {
+        ...defaultConfig,
+        periods: clonePeriods(value.periods),
+      };
+    }
+
+    if (value.fridayDefaultsVersion !== FRIDAY_DEFAULTS_VERSION) {
+      return {
+        ...value,
+        version: CONFIG_VERSION,
+        fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
+        periods: clonePeriods(value.periods),
+        fridayPeriods: clonePeriods(fridayDefaultPeriods),
+      };
+    }
+
+    return {
+      ...value,
+      version: CONFIG_VERSION,
+      fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
+      periods: clonePeriods(value.periods),
+      fridayPeriods:
+        value.fridayPeriods.length > 0
+          ? clonePeriods(value.fridayPeriods)
+          : clonePeriods(fridayDefaultPeriods),
+    };
+  }
+
+  if (isLegacyConfig(value)) {
+    return {
+      version: CONFIG_VERSION,
+      fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
+      periods: clonePeriods(value.periods),
+      fridayPeriods: clonePeriods(fridayDefaultPeriods),
+      isEnabled: value.isEnabled,
+      volume: value.volume,
+    };
+  }
+
+  return defaultConfig;
+};
+
+const getScheduleTypeForToday = (): ScheduleType => {
+  const dayOfWeek = new Date().getDay();
+  return dayOfWeek === 5 ? "friday" : "regular";
+};
+
+const getPeriodsForSchedule = (config: PeriodConfig, schedule: ScheduleType): Period[] =>
+  schedule === "friday" ? config.fridayPeriods : config.periods;
 
 export function usePeriodNotification() {
   const [config, setConfig] = useState<PeriodConfig | null>(null);
@@ -20,13 +164,25 @@ export function usePeriodNotification() {
   const previousTimeRef = useRef<string | null>(null);
   const notificationPlayedRef = useRef<Set<string>>(new Set());
 
-  // Load config from localStorage
+  const initializeDefaultConfig = () => {
+    const defaultConfig = createDefaultConfig();
+    setConfig(defaultConfig);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultConfig));
+  };
+
+  const getActivePeriods = (schedule: ScheduleType = getScheduleTypeForToday()) => {
+    if (!config) return [];
+    return getPeriodsForSchedule(config, schedule);
+  };
+
   useEffect(() => {
     const loadConfig = () => {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          setConfig(JSON.parse(stored));
+          const normalizedConfig = normalizeConfig(JSON.parse(stored));
+          setConfig(normalizedConfig);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedConfig));
         } catch {
           initializeDefaultConfig();
         }
@@ -38,51 +194,31 @@ export function usePeriodNotification() {
     loadConfig();
   }, []);
 
-  const initializeDefaultConfig = () => {
-    const defaultConfig: PeriodConfig = {
-      periods: [
-        { id: "1", name: "Período 1", startTime: "08:00", endTime: "09:30", soundUrl: DEFAULT_SOUND },
-        { id: "2", name: "Período 2", startTime: "09:30", endTime: "11:00", soundUrl: DEFAULT_SOUND },
-        { id: "3", name: "Intervalo", startTime: "11:00", endTime: "11:20", soundUrl: DEFAULT_SOUND },
-        { id: "4", name: "Período 3", startTime: "11:20", endTime: "13:00", soundUrl: DEFAULT_SOUND },
-      ],
-      isEnabled: true,
-      volume: 70,
-    };
-    setConfig(defaultConfig);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultConfig));
-  };
-
-  // Monitor time and check for period changes
   useEffect(() => {
     if (!config?.isEnabled) return;
 
     const intervalId = setInterval(async () => {
       const time = getCurrentTimeString();
+      const activePeriods = getPeriodsForSchedule(config, getScheduleTypeForToday());
       setCurrentTime(time);
 
-      // Check if period changed
       if (didPeriodChange(previousTimeRef.current, time)) {
-        // Find the period for the new time
         let newPeriod: Period | null = null;
-        for (const period of config.periods) {
+        for (const period of activePeriods) {
           if (isCurrentTimeBetween(period.startTime, period.endTime)) {
             newPeriod = period;
             break;
           }
         }
 
-        // Only play sound if we actually entered a new period
         if (newPeriod && newPeriod.id !== currentPeriod?.id) {
           setCurrentPeriod(newPeriod);
 
-          // Play notification sound
           if (newPeriod.soundUrl && !notificationPlayedRef.current.has(`${time}-${newPeriod.id}`)) {
             try {
               await playSound(newPeriod.soundUrl, config.volume);
               notificationPlayedRef.current.add(`${time}-${newPeriod.id}`);
 
-              // Clear old entries to prevent memory leak
               if (notificationPlayedRef.current.size > 100) {
                 notificationPlayedRef.current.clear();
               }
@@ -93,9 +229,8 @@ export function usePeriodNotification() {
         } else if (!newPeriod) {
           setCurrentPeriod(null);
         }
-      } else if (!currentPeriod && config.periods.length > 0) {
-        // Check current period on interval even if time didn't change
-        for (const period of config.periods) {
+      } else if (!currentPeriod && activePeriods.length > 0) {
+        for (const period of activePeriods) {
           if (isCurrentTimeBetween(period.startTime, period.endTime)) {
             setCurrentPeriod(period);
             break;
@@ -104,70 +239,86 @@ export function usePeriodNotification() {
       }
 
       previousTimeRef.current = time;
-    }, 1000); // Check every second
+    }, 1000);
 
     return () => clearInterval(intervalId);
   }, [config, currentPeriod]);
 
   const saveConfig = (newConfig: PeriodConfig) => {
-    setConfig(newConfig);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+    const versionedConfig = {
+      ...newConfig,
+      version: CONFIG_VERSION,
+      fridayDefaultsVersion: FRIDAY_DEFAULTS_VERSION,
+    };
+
+    setConfig(versionedConfig);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(versionedConfig));
   };
 
-  const addPeriod = (period: Period) => {
+  const addPeriod = (period: Period, schedule: ScheduleType = "regular") => {
     if (!config) return;
-    const updated = {
+
+    const key = schedule === "friday" ? "fridayPeriods" : "periods";
+    saveConfig({
       ...config,
-      periods: [...config.periods, period],
-    };
-    saveConfig(updated);
+      [key]: [...getPeriodsForSchedule(config, schedule), period],
+    });
   };
 
-  const updatePeriod = (id: string, updates: Partial<Period>) => {
+  const updatePeriod = (
+    id: string,
+    updates: Partial<Period>,
+    schedule: ScheduleType = "regular"
+  ) => {
     if (!config) return;
-    const updated = {
+
+    const key = schedule === "friday" ? "fridayPeriods" : "periods";
+    saveConfig({
       ...config,
-      periods: config.periods.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-    };
-    saveConfig(updated);
+      [key]: getPeriodsForSchedule(config, schedule).map((period) =>
+        period.id === id ? { ...period, ...updates } : period
+      ),
+    });
   };
 
-  const deletePeriod = (id: string) => {
+  const deletePeriod = (id: string, schedule: ScheduleType = "regular") => {
     if (!config) return;
-    const updated = {
+
+    const key = schedule === "friday" ? "fridayPeriods" : "periods";
+    saveConfig({
       ...config,
-      periods: config.periods.filter((p) => p.id !== id),
-    };
-    saveConfig(updated);
+      [key]: getPeriodsForSchedule(config, schedule).filter((period) => period.id !== id),
+    });
   };
 
   const toggleEnabled = () => {
     if (!config) return;
-    const updated = {
+    saveConfig({
       ...config,
       isEnabled: !config.isEnabled,
-    };
-    saveConfig(updated);
+    });
   };
 
   const updateVolume = (volume: number) => {
     if (!config) return;
-    const updated = {
+    saveConfig({
       ...config,
       volume: Math.min(Math.max(volume, 0), 100),
-    };
-    saveConfig(updated);
+    });
   };
 
   return {
     config,
     currentPeriod,
     currentTime,
+    getActivePeriods,
+    getScheduleTypeForToday,
     saveConfig,
     addPeriod,
     updatePeriod,
     deletePeriod,
     toggleEnabled,
     updateVolume,
+    resetToDefaults: initializeDefaultConfig,
   };
 }

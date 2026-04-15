@@ -7,7 +7,10 @@ export interface Period {
 }
 
 export interface PeriodConfig {
+  version?: number;
+  fridayDefaultsVersion?: number;
   periods: Period[];
+  fridayPeriods: Period[];
   isEnabled: boolean;
   volume: number; // 0-100
 }

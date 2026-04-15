@@ -1,8 +1,8 @@
 "use client";
 
 import { Period } from "@/types/period";
-import { useState, useRef } from "react";
-import { Trash2, Plus, Save, Volume2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { PencilLine, Plus, Save, Trash2, Volume2, X } from "lucide-react";
 import { playSound } from "@/lib/audioUtils";
 
 interface PeriodItemProps {
@@ -47,108 +47,125 @@ function PeriodItem({ period, onUpdate, onDelete }: PeriodItemProps) {
 
   if (isEditing) {
     return (
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Nome</label>
-          <input
-            type="text"
-            value={editedPeriod.name}
-            onChange={(e) => setEditedPeriod({ ...editedPeriod, name: e.target.value })}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+      <div className="rounded-[26px] border border-blue-100 bg-blue-50/80 p-5 shadow-sm">
+        <div className="grid gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Início</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Nome</label>
             <input
-              type="time"
-              value={editedPeriod.startTime}
-              onChange={(e) => setEditedPeriod({ ...editedPeriod, startTime: e.target.value })}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              type="text"
+              value={editedPeriod.name}
+              onChange={(e) => setEditedPeriod({ ...editedPeriod, name: e.target.value })}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Fim</label>
-            <input
-              type="time"
-              value={editedPeriod.endTime}
-              onChange={(e) => setEditedPeriod({ ...editedPeriod, endTime: e.target.value })}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Inicio</label>
+              <input
+                type="time"
+                value={editedPeriod.startTime}
+                onChange={(e) => setEditedPeriod({ ...editedPeriod, startTime: e.target.value })}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Fim</label>
+              <input
+                type="time"
+                value={editedPeriod.endTime}
+                onChange={(e) => setEditedPeriod({ ...editedPeriod, endTime: e.target.value })}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
           </div>
-        </div>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Som de Notificação</label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1 px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium"
-            >
-              Escolher Arquivo MP3
-            </button>
-            {editedPeriod.soundUrl && (
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Som de notificacao</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
-                onClick={handlePlaySound}
-                disabled={isPlayingSound}
-                className="px-3 py-2 text-sm bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-md font-medium flex items-center gap-1"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                <Volume2 size={16} /> Testar
+                Escolher arquivo de audio
               </button>
+              {editedPeriod.soundUrl && (
+                <button
+                  onClick={handlePlaySound}
+                  disabled={isPlayingSound}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-slate-300"
+                >
+                  <Volume2 size={16} />
+                  Testar
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            {editedPeriod.soundUrl && (
+              <p className="mt-2 text-xs font-medium text-emerald-700">Audio configurado</p>
             )}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          {editedPeriod.soundUrl && (
-            <p className="text-xs text-green-600">✓ Som configurado</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2"
-          >
-            <Save size={18} /> Salvar
-          </button>
-          <button
-            onClick={() => {
-              setEditedPeriod(period);
-              setIsEditing(false);
-            }}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md"
-          >
-            Cancelar
-          </button>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={handleSave}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              <Save size={16} />
+              Salvar
+            </button>
+            <button
+              onClick={() => {
+                setEditedPeriod(period);
+                setIsEditing(false);
+              }}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+            >
+              <X size={16} />
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{period.name}</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            {period.startTime} → {period.endTime}
+    <div className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-semibold text-slate-950">{period.name}</h3>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Periodo
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            {period.startTime} {"->"} {period.endTime}
           </p>
         </div>
+
         <div className="flex gap-2">
           <button
             onClick={() => setIsEditing(true)}
-            className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
+            <PencilLine size={16} />
             Editar
           </button>
           <button
             onClick={onDelete}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md"
+            className="inline-flex items-center justify-center rounded-2xl bg-rose-50 p-2.5 text-rose-600 transition hover:bg-rose-100"
           >
-            <Trash2 size={20} />
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
@@ -208,6 +225,7 @@ export function PeriodList({
         id: Date.now().toString(),
         ...newPeriod,
       });
+
       setNewPeriod({
         name: "",
         startTime: "08:00",
@@ -219,101 +237,118 @@ export function PeriodList({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        {periods.map((period) => (
-          <PeriodItem
-            key={period.id}
-            period={period}
-            onUpdate={(updates) => onUpdatePeriod(period.id, updates)}
-            onDelete={() => onDeletePeriod(period.id)}
-          />
-        ))}
-      </div>
+    <div className="space-y-5">
+      {periods.length > 0 ? (
+        <div className="space-y-3">
+          {periods.map((period) => (
+            <PeriodItem
+              key={period.id}
+              period={period}
+              onUpdate={(updates) => onUpdatePeriod(period.id, updates)}
+              onDelete={() => onDeletePeriod(period.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
+          Nenhum periodo cadastrado nesta grade.
+        </div>
+      )}
 
       {showAddForm ? (
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nome do Período</label>
-            <input
-              type="text"
-              placeholder="Ex: Aula, Intervalo, Recreio"
-              value={newPeriod.name}
-              onChange={(e) => setNewPeriod({ ...newPeriod, name: e.target.value })}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-5 shadow-sm">
+          <div className="grid gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Horário de Início</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Nome do periodo</label>
               <input
-                type="time"
-                value={newPeriod.startTime}
-                onChange={(e) => setNewPeriod({ ...newPeriod, startTime: e.target.value })}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                placeholder="Ex: Aula, intervalo, recreio"
+                value={newPeriod.name}
+                onChange={(e) => setNewPeriod({ ...newPeriod, name: e.target.value })}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Horário de Fim</label>
-              <input
-                type="time"
-                value={newPeriod.endTime}
-                onChange={(e) => setNewPeriod({ ...newPeriod, endTime: e.target.value })}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Horario de inicio</label>
+                <input
+                  type="time"
+                  value={newPeriod.startTime}
+                  onChange={(e) => setNewPeriod({ ...newPeriod, startTime: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Horario de fim</label>
+                <input
+                  type="time"
+                  value={newPeriod.endTime}
+                  onChange={(e) => setNewPeriod({ ...newPeriod, endTime: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Som de Notificação</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => newPeriodFileInputRef.current?.click()}
-                className="flex-1 px-3 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium"
-              >
-                Escolher Arquivo MP3
-              </button>
-              {newPeriod.soundUrl && (
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Som de notificacao</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button
-                  onClick={handlePlayNewSound}
-                  disabled={isPlayingNewSound}
-                  className="px-3 py-2 text-sm bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-md font-medium flex items-center gap-1"
+                  onClick={() => newPeriodFileInputRef.current?.click()}
+                  className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
-                  <Volume2 size={16} /> Testar
+                  Escolher arquivo de audio
                 </button>
+                {newPeriod.soundUrl && (
+                  <button
+                    onClick={handlePlayNewSound}
+                    disabled={isPlayingNewSound}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-slate-300"
+                  >
+                    <Volume2 size={16} />
+                    Testar
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={newPeriodFileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleAddPeriodFileUpload}
+                className="hidden"
+              />
+
+              {newPeriod.soundUrl && (
+                <p className="mt-2 text-xs font-medium text-emerald-700">Audio configurado</p>
               )}
             </div>
-            <input
-              ref={newPeriodFileInputRef}
-              type="file"
-              accept="audio/*"
-              onChange={handleAddPeriodFileUpload}
-              className="hidden"
-            />
-            {newPeriod.soundUrl && (
-              <p className="text-xs text-green-600">✓ Som configurado</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddPeriod}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2"
-            >
-              <Plus size={18} /> Adicionar Período
-            </button>
-            <button
-              onClick={() => setShowAddForm(false)}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md"
-            >
-              Cancelar
-            </button>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                onClick={handleAddPeriod}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Plus size={16} />
+                Adicionar periodo
+              </button>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+              >
+                <X size={16} />
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       ) : (
         <button
           onClick={() => setShowAddForm(true)}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-[22px] border border-dashed border-blue-300 bg-blue-50 px-5 py-4 text-sm font-semibold text-blue-900 transition hover:border-blue-400 hover:bg-blue-100"
         >
-          <Plus size={20} /> Novo Período
+          <Plus size={18} />
+          Novo periodo
         </button>
       )}
     </div>
